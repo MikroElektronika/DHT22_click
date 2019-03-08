@@ -1,0 +1,119 @@
+{*
+Example for DHT22 Click
+
+    Date          : Dec 2018.
+    Author        : Nenad Filipovic
+
+Test configuration TIVA :
+    
+    MCU              : TM4C129XNCZAD
+    Dev. Board       : EasyMx PRO v7 for TIVA ARM
+    ARM Compiler ver : v6.0.0.0
+
+---
+
+Description :
+
+The application is composed of three sections :
+
+- System Initialization - Initializes GPIO and LOG structures, set CS pin as input/output.
+- Application Initialization - Initialization driver enable's - GPIO and start write log.
+- Application Task - (code snippet) This is a example which demonstrates the use of DHT22 Click board.
+     DHT22 Click communicates with sensor via CS pin and display humidity and temperature value by
+     set the CS pin as output and sends start signal to the sensor,
+     set the CS pin as input and release the bus to wait the sensor response signal,
+     reading data from the sensor and display calculated value of the humidity and temperature data.
+     Results are being sent to the Usart Terminal where you can track their changes.
+     All data logs write on usb uart changes for every 1 sec.
+
+Additional Functions :
+
+- dht22_displayTempHum() - Write log to Usart Terminal of humidity and temperature as a two-digit number.
+
+*}
+program Click_DHT22_TIVA;
+
+uses Click_DHT22_types, Click_DHT22_config;
+
+var
+    humidity : uint16_t; 
+    temperature : uint16_t; 
+    sensorData : uint32_t; 
+    logText : array[50] of char; 
+    
+procedure dht22_displayTempHum(); 
+begin
+
+    mikrobus_logWrite(' Humidity   : ', _LOG_TEXT); 
+    IntToStr((humidity / 10), logText); 
+    ltrim(logText); 
+    mikrobus_logWrite(logText, _LOG_TEXT); 
+    mikrobus_logWrite('.', _LOG_TEXT); 
+    IntToStr((humidity mod 10), logText); 
+    ltrim(logText); 
+    mikrobus_logWrite(logText, _LOG_TEXT); 
+    mikrobus_logWrite(' %', _LOG_LINE); 
+    mikrobus_logWrite(' Temperature: ', _LOG_TEXT); 
+    IntToStr((temperature / 10), logText); 
+    ltrim(logText); 
+    mikrobus_logWrite(logText, _LOG_TEXT); 
+    mikrobus_logWrite('.', _LOG_TEXT); 
+    IntToStr((temperature mod 10), logText); 
+    ltrim(logText); 
+    mikrobus_logWrite(logText, _LOG_TEXT); 
+    mikrobus_logWrite(' °C', _LOG_LINE); 
+    mikrobus_logWrite('----------------------', _LOG_LINE); 
+
+end;
+
+procedure systemInit(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_INPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_OUTPUT); 
+    mikrobus_logInit(_LOG_USBUART_A, 9600); 
+    Delay_100ms(); 
+
+end;
+
+procedure applicationInit(); 
+begin
+
+    dht22_gpioDriverInit(T_DHT22_P(@_MIKROBUS1_GPIO)); 
+    mikrobus_logWrite('----------------------', _LOG_LINE); 
+    mikrobus_logWrite('     DHT22  Click     ', _LOG_LINE); 
+    mikrobus_logWrite('----------------------', _LOG_LINE); 
+    Delay_100ms(); 
+
+end;
+
+procedure applicationTask(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_OUTPUT); 
+    dht22_startSignal(); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_INPUT); 
+    if (dht22_checkSensorResponse()) then 
+    begin
+        sensorData := dht22_getSensorData(); 
+        if ((sensorData <> 0)) then 
+        begin
+            temperature := dht22_calculateTemperature(sensorData); 
+            humidity := dht22_calculateHumidity(sensorData); 
+            dht22_displayTempHum(); 
+        end; 
+    end; 
+    Delay_1sec(); 
+
+end;
+
+begin
+
+    systemInit(); 
+    applicationInit(); 
+    while (1) do 
+    begin 
+        applicationTask(); 
+    end;
+
+end.

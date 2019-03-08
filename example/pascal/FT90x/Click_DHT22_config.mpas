@@ -1,0 +1,5 @@
+unit Click_DHT22_config;
+
+uses Click_DHT22_types;
+
+end.

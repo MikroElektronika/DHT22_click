@@ -1,0 +1,5 @@
+module Click_DHT22_config
+
+include Click_DHT22_types
+
+end.
